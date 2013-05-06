@@ -13,100 +13,12 @@
 
 // Debug enable/disable
 $debug_msg = 0;
-
 $split = array();
 // ------------------------------------------------------------------
 // ------------------------------------------------------------------
 // Functions
 // ------------------------------------------------------------------
-include 'arm_db_format_date.php';
-// ------------------------------------------------------------------
-$file = @fopen('arm_crick_match_list.csv', "r") or exit("Unable to open file!");
-$i=0;
-while(!feof($file))
-{
-  //echo fgets($file). "<br>";
-  $curr_line = fgets($file);
-  $split = preg_split('%[,]+%', $curr_line);
-  foreach ($split as $key => $val) {
-    switch ($key)
-      {
-      case 0: $date[$i]        = $val; break;
-      case 1: $home_team[$i]   = $val; break;
-      case 2: $away_team[$i]   = $val; break;
-      case 3: $ground_name[$i] = $val; break;
-      case 4: $match_type[$i]  = $val; break;
-      case 5: $bat_first[$i]   = $val; break;
-      case 6: $team_score[$i]  = $val; break;
-      case 7: $opp_score[$i]   = $val; break;
-      case 8: $result[$i]      = $val; break;
-      }
-  }
-  $i=$i+1;
-}
-$match_num_lines = $i;
-
-if ($debug_msg!=0) {
-  for ($i=0;$i<$match_num_lines;$i++) {
-    echo "$i=$date[$i]::$home_team[$i]::$away_team[$i]::$ground_name[$i]::$match_type[$i]::$bat_first[$i]::$team_score[$i]::$opp_score[$i]::$result[$i]";
-    echo "<br />";
-  }
-}
-fclose($file);
-
-// ------------------------------------------------------------------
-// Format Data
-// ------------------------------------------------------------------
-
-// match_list:-
-// -----------
-// id --> generated using $i
-// date --> $ already available
-// type_id --> already available (reverse the string into type)
-// ground_id --> ground names available, generate ground list first
-// opp_a_id --> opp a name available, generate team list first
-// opp_b_id --> opp b name available, generate team list first
-// who_won --> already available
-// home_away --> available
-// num_overs --> to be assumed to be 20?
-// overs_type --> to be assumed to be 6?
-// description --> leave empty
-// is_legacy --> 1
-// ------------------------------------------------------------------
-// ------------------------------------------------------------------
-// Extract team list
-// ------------------------------------------------------------------
-
-// Remove additional ARM names
-for ($i=0;$i<$match_num_lines;$i++) {
-  if(preg_match('/ARM /',$home_team[$i])) {
-    $home_team[$i] = "ARM";
-  }
-  if(preg_match('/ARM /',$away_team[$i])) {
-    $away_team[$i] = "ARM";
-  }
-}
-
-for ($i=0;$i<$match_num_lines;$i++) {
-  for ($j=0;$j<2;$j++) {
-    if ($j==0) {
-      $team_list[$i*2+$j] = $home_team[$i];
-    } else {
-      $team_list[$i*2+$j] = $away_team[$i];
-    }
-  }
-}
-
-//foreach($team_list as $key => $val) {
-//  echo "$key => $val <br />";
-//}
-
-// Remove duplicate entries from the array
-$unique_team_list = array_unique($team_list);
-
-//foreach($unique_team_list as $key => $val) {
-//  echo "$key => $val <br />";
-//}
+include 'arm_db_functions.php';
 // ------------------------------------------------------------------
 // ------------------------------------------------------------------
 //
@@ -129,180 +41,31 @@ $db_handle = mysql_connect($server, $user_name, $password);
 $db_found = mysql_select_db($database, $db_handle);
 // ------------------------------------------------------------------
 // ------------------------------------------------------------------
-// Empty the table first
+// match list
 // ------------------------------------------------------------------
-
-$SQL="TRUNCATE team_list";
-$result_sql=mysql_query($SQL);
-
-// ------------------------------------------------------------------
-// Insert the sorted array into the team list
-// ------------------------------------------------------------------
-
+$SQL = "SELECT * FROM match_list" ;
+$db_result = mysql_query($SQL);
 $i=0;
-foreach ($unique_team_list as $key => $val) {
+while($db_field = mysql_fetch_array($db_result))
+{
+  $match_id = $db_field["id"];
+  $match_list_date[$match_id] = $db_field["date"];
+  $match_list_opp_a_id[$match_id] = $db_field["opp_a_id"];
+  $match_list_opp_b_id[$match_id] = $db_field["opp_b_id"];
   $i=$i+1;
-  $SQL="INSERT INTO `$database`.`team_list` (`id`, `name`) VALUES ($i, '$val')";
-  $team_name_list[$i] = "$val";
-  $result_sql=mysql_query($SQL);
 }
+$match_num_lines = $i;
 // ------------------------------------------------------------------
 // ------------------------------------------------------------------
-// Extract ground list
+// total list
 // ------------------------------------------------------------------
-
-// Remove duplicate entries from the ground list array
-$unique_ground_list = array_unique($ground_name);
-
-foreach($unique_ground_list as $key => $val) {
-//  echo "$key => $val <br />";
-}
-// ------------------------------------------------------------------
-// ------------------------------------------------------------------
-// Empty the table first
-// ------------------------------------------------------------------
-
-$SQL="TRUNCATE ground_list";
-$result_sql=mysql_query($SQL);
-
-// ------------------------------------------------------------------
-// Insert the sorted array into the ground list
-// ------------------------------------------------------------------
-
-// Update ground list array too
-$i=0;
-$ground_name_list = array();
-foreach ($unique_ground_list as $key => $val) {
-  $i=$i+1;
-  $SQL="INSERT INTO `$database`.`ground_list` (`id`, `name`) VALUES ($i, '$val')";
-  $result_sql=mysql_query($SQL);
-  $ground_name_list[$i] = $val;
-}
-// ------------------------------------------------------------------
-// ------------------------------------------------------------------
-// Update match statistics
-// ------------------------------------------------------------------
-
-// Empty the table first for master match list
-$SQL="TRUNCATE match_list";
-$result_sql=mysql_query($SQL);
-
-// match_list:-
-// -----------
-// id --> generated using $i
-// date --> $ already available
-// type_id --> already available (reverse the string into type)
-// ground_id --> ground names available, generate ground list first
-// opp_a_id --> opp a name available, generate team list first
-// opp_b_id --> opp b name available, generate team list first
-// who_won --> already available
-// home_away --> available
-// num_overs --> to be assumed to be 20?
-// overs_type --> to be assumed to be 6?
-// description --> leave empty
-// is_legacy --> 1
-for ($i=0;$i<$match_num_lines;$i++) {
-  // -- DATE --
-  $put_date = format_date($date[$i]);
-
-  // -- INNINGS1 and INNINGS2 ID --
-  if ($bat_first[$i]==0) {
-    $innings1_team_name = $home_team[$i];
-    $innings2_team_name = $away_team[$i];
-  } else {
-    $innings1_team_name = $away_team[$i];
-    $innings2_team_name = $home_team[$i];
-  }
-
-  $inn1_found = 0;
-  $inn2_found = 0;
-  foreach ($team_name_list as $key => $val) {
-    if ($innings1_team_name==$val) {
-      $put_innings1_id = $key;
-      $inn1_found = 1;
-    }
-    if ($innings2_team_name==$val) {
-      $put_innings2_id = $key;
-      $inn2_found = 1;
-    }
-  }
-  if ($inn1_found==0) {
-    echo " <br /> ERROR: INN1";
-  }
-  if ($inn2_found==0) {
-    echo " <br /> ERROR: INN2";
-  }
-
-  // -- TYPE ID --
-  if (preg_match("/fr/i", $match_type[$i])) {
-    $put_type_id = 0;
-  } else if (preg_match("/l-bz1/i", $match_type[$i])) {
-    $put_type_id = 1;
-  } else if (preg_match("/l-bz2/i", $match_type[$i])) {
-    $put_type_id = 2;
-  } else {
-    echo "<br /> ERROR: $match_type[$i]::end::";
-  }
-  // -- GROUND ID --
-  foreach ($ground_name_list as $key => $val) {
-    if ($val==$ground_name[$i]) {
-      $put_ground_id = $key;
-      $ground_found = 1;
-    }
-  }
-  if ($ground_found==0) {
-    echo " <br /> ERROR: No ground found";
-  }
-
-  // -- WHO WON --
-  if (preg_match("/won/i", $result[$i])) {
-    $put_who_won = ($bat_first[$i]==0) ? 0 : 1;
-  } else if (preg_match("/lost/i", $result[$i])) {
-    $put_who_won = ($bat_first[$i]==0) ? 1 : 0;
-  } else if (preg_match("/tie/i", $result[$i])) {
-    $put_who_won = 2;
-  } else if (preg_match("/abandoned/i", $result[$i])) {
-    $put_who_won = 3;
-  } else {
-    echo "<br /> ERROR: ::start::$temp_string::end::";
-  }
-
-  // -- NUM OVERS --
-  $put_num_overs = 20;
-  // -- OVERS TYPE --
-  $put_overs_type = 6;
-  // -- TEXT --
-  $put_text = "Legacy";
-  // -- IS LEGACY --
-  $put_is_legacy = 1;
-
-  //
-  // DISPLAY RESULT
-  //
-  $new_debug = 0;
-  if ($new_debug!=0) {
-    echo "<br />
-          id==$i,
-          date==$put_date,
-          type_id==$put_type_id,
-          ground_id==$put_ground_id,
-          opp_a_id==$put_innings1_id,
-          opp_b_id==$put_innings2_id,
-          who_won==$put_who_won,
-          home_away==0,
-          num_overs==$put_num_overs,
-          overs_type==$put_overs_type,
-          description==$put_text,
-          is_legacy==$put_is_legacy";
-  }
-
-  // Insert the master match list
-  $match_id=$i+1;
-  $match_list_field="`id`, `date`, `type_id`, `ground_id`, `opp_a_id`, `opp_b_id`, `who_won`, `home_away`, `num_overs`, `overs_type`, `description`, `is_legacy`";
-  $match_list_value="$match_id, '$put_date', $put_type_id, $put_ground_id, $put_innings1_id, $put_innings2_id, $put_who_won, 0, 20, 6, '$put_text', 1";
-  $SQL="INSERT INTO `$database`.`match_list` ($match_list_field) VALUES ($match_list_value)";
-  //echo "$SQL <br />";
-  $result_sql=mysql_query($SQL);
+$SQL = "SELECT * FROM total_list" ;
+$db_result = mysql_query($SQL);
+while($db_field = mysql_fetch_array($db_result))
+{
+  $match_id = $db_field["id"];
+  $total_list_opp_a_total[$match_id] = $db_field["opp_a_total"];
+  $total_list_opp_b_total[$match_id] = $db_field["opp_b_total"];
 }
 // ------------------------------------------------------------------
 // ------------------------------------------------------------------
@@ -319,7 +82,7 @@ while(!feof($file))
   foreach ($split as $key => $val) {
     switch ($key)
       {
-      case 0:  $player_date[$i]  = $val; break;
+      case 0:  $player_date[$i]  = format_date($val); break;
       case 1:  $player_name[$i]  = $val; break;
       case 2:  $runs_scored[$i]  = $val; break;
       case 3:  $how_out[$i]      = $val; break;
@@ -338,9 +101,7 @@ while(!feof($file))
 }
 $player_num_lines = $i;
 
-$player_debug_msg = 0;
-
-if ($player_debug_msg!=0) {
+if ($debug_msg!=0) {
   for ($i=0;$i<$player_num_lines;$i++) {
     echo "<br />
           id==$i,
@@ -364,17 +125,15 @@ fclose($file);
 // ------------------------------------------------------------------
 // Extract player list
 // ------------------------------------------------------------------
-
-// Remove duplicate entries from the ground list array
+// Remove duplicate entries from the player list array
 $unique_player_list = array_unique($player_name);
 // ------------------------------------------------------------------
 // ------------------------------------------------------------------
 // Empty the table first for player list
 // ------------------------------------------------------------------
-
 $SQL="TRUNCATE player_list";
 $result_sql=mysql_query($SQL);
-
+// ------------------------------------------------------------------
 // ------------------------------------------------------------------
 // Insert the sorted array into the player list
 // ------------------------------------------------------------------
@@ -392,23 +151,156 @@ foreach ($unique_player_list as $key => $val) {
       case 0: $first_name = $new_val; break;
       case 1: $last_name = $new_val; break;
       default: echo "ERROR-->key==$new_key, val==$new_val<br />";
-
       }
   }
   $SQL="INSERT INTO `$database`.`player_list` (`id`, `team_id`, `first_name`, `last_name`) VALUES ($i, 1, '$first_name', '$last_name')";
   $result_sql=mysql_query($SQL);
+  // keep a player name list
+  $player_name_list[$i] = "$first_name $last_name";
 }
 // ------------------------------------------------------------------
 // ------------------------------------------------------------------
-// Combine match and player DBs
+// Add player ID to the orignial player list
 // ------------------------------------------------------------------
-for ($i=0;$i<$match_num_lines;$i++) {
-  for ($j=0;$j<$player_num_lines;$j++) {
-    if ($date[$i]==$player_date[$j]) {
-      echo "match--> $date[$i], player--> $player_date[$j] <br />";
+for ($i=0;$i<$player_num_lines;$i++) {
+  $player_name_found = 0;
+  foreach ($player_name_list as $arr_player_id => $arr_player_name) {
+    if ($arr_player_name==$player_name[$i]) {
+      $player_id[$i] = $arr_player_id;
+      $player_name_found = 1;
+    }
+  }
+  if ($player_name_found==0) {
+    echo "<br />ERROR: Player name not found--> $player_name[$i]";
+  }
+}
+// ------------------------------------------------------------------
+// ------------------------------------------------------------------
+// Update innings 1 or innings 2 batting list
+// ------------------------------------------------------------------
+$opp_a_total_score = array();
+$opp_b_total_score = array();
+$bat_debug = 0;
+//$SQL="TRUNCATE opp_a_bt_list";
+//$result_sql=mysql_query($SQL);
+//$SQL="TRUNCATE opp_b_bt_list";
+//$result_sql=mysql_query($SQL);
+
+foreach ($match_list_date as $match_id => $match_date) {
+  // initialize
+  $order = 0;
+  $opp_a_total_score[$match_id] = 0;
+  $opp_b_total_score[$match_id] = 0;
+
+  for ($i=0;$i<$player_num_lines;$i++) {
+    // match date first
+    if ($match_date==$player_date[$i]) {
+      // if this match is ARM vs ARM then handle it slightly differently
+      if ( ($match_list_opp_a_id[$match_id]==1) &&
+	   ($match_list_opp_b_id[$match_id]==1)) {
+	$order = $order + 1;
+	if ($order < 12) {
+	  $put_match_id = $match_id;
+	  $put_order = $order;
+	  $put_bt_id = $player_id[$i];
+	  $put_num_runs = $runs_scored[$i];
+	  $put_out_id = get_out_id($how_out[$i]);
+	  $SQL_opp_a_field = "`match_id`, `order`, `bt_id`, `num_runs`, `num_balls`, `num_4s`, `num_6s`, `out_id`, `bl_id`, `c_ro_id`";
+	  $SQL_opp_a_value = "$put_match_id, $put_order, $put_bt_id, $put_num_runs, 0, 0, 0, $put_out_id, 0, 0";
+	  $SQL="INSERT INTO `$database`.`opp_a_bt_list` ($SQL_opp_a_field) VALUES ($SQL_opp_a_value)";
+	  if ($bat_debug!=0) {echo "$SQL<br />";}
+	  //$result_sql=mysql_query($SQL);
+	  $opp_a_total_score[$match_id] = $opp_a_total_score[$match_id] + $put_num_runs;
+	} else {
+	  $put_match_id = $match_id;
+	  $put_order = $order-11;
+	  $put_bt_id = $player_id[$i];
+	  $put_num_runs = $runs_scored[$i];
+	  $put_out_id = get_out_id($how_out[$i]);
+	  $SQL_opp_b_field = "`match_id`, `order`, `bt_id`, `num_runs`, `num_balls`, `num_4s`, `num_6s`, `out_id`, `bl_id`, `c_ro_id`";
+	  $SQL_opp_b_value = "$put_match_id, $put_order, $put_bt_id, $put_num_runs, 0, 0, 0, $put_out_id, 0, 0";
+	  $SQL="INSERT INTO `$database`.`opp_b_bt_list` ($SQL_opp_b_field) VALUES ($SQL_opp_b_value)";
+	  if ($bat_debug!=0) {echo "$SQL<br />";}
+	  //$result_sql=mysql_query($SQL);
+	  $opp_b_total_score[$match_id] = $opp_b_total_score[$match_id] + $put_num_runs;
+	}
+      } else if ($match_list_opp_a_id[$match_id]==1) {
+	$order = $order + 1;
+	$put_match_id = $match_id;
+	$put_order = $order;
+	$put_bt_id = $player_id[$i];
+	$put_num_runs = $runs_scored[$i];
+	$put_out_id = get_out_id($how_out[$i]);
+	$SQL_opp_a_field = "`match_id`, `order`, `bt_id`, `num_runs`, `num_balls`, `num_4s`, `num_6s`, `out_id`, `bl_id`, `c_ro_id`";
+	$SQL_opp_a_value = "$put_match_id, $put_order, $put_bt_id, $put_num_runs, 0, 0, 0, $put_out_id, 0, 0";
+	$SQL="INSERT INTO `$database`.`opp_a_bt_list` ($SQL_opp_a_field) VALUES ($SQL_opp_a_value)";
+	if ($bat_debug!=0) {echo "$SQL<br />";}
+	//$result_sql=mysql_query($SQL);
+	$opp_a_total_score[$match_id] = $opp_a_total_score[$match_id] + $put_num_runs;
+      } else if ($match_list_opp_b_id[$match_id]==1) {
+	$order = $order + 1;
+	$put_match_id = $match_id;
+	$put_order = $order;
+	$put_bt_id = $player_id[$i];
+	$put_num_runs = $runs_scored[$i];
+	$put_out_id = get_out_id($how_out[$i]);
+	$SQL_opp_b_field = "`match_id`, `order`, `bt_id`, `num_runs`, `num_balls`, `num_4s`, `num_6s`, `out_id`, `bl_id`, `c_ro_id`";
+	$SQL_opp_b_value = "$put_match_id, $put_order, $put_bt_id, $put_num_runs, 0, 0, 0, $put_out_id, 0, 0";
+	$SQL="INSERT INTO `$database`.`opp_b_bt_list` ($SQL_opp_b_field) VALUES ($SQL_opp_b_value)";
+	if ($bat_debug!=0) {echo "$SQL<br />";}
+	//$result_sql=mysql_query($SQL);
+	$opp_b_total_score[$match_id] = $opp_b_total_score[$match_id] + $put_num_runs;
+      } else {
+	echo "ERROR: No match found";
+      }
     }
   }
 }
+// ------------------------------------------------------------------
+// ------------------------------------------------------------------
+// Update innings 1 and 2 extras (to match up the total)
+// ------------------------------------------------------------------
+//$SQL="TRUNCATE opp_a_xt_list";
+//$result_sql=mysql_query($SQL);
+//$SQL="TRUNCATE opp_b_xt_list";
+//$result_sql=mysql_query($SQL);
+
+foreach ($match_list_date as $match_id => $match_date) {
+  // If innings 1 is ARM then check for total
+  if ($match_list_opp_a_id[$match_id]==1) {
+    if ($total_list_opp_a_total[$match_id] >= $opp_a_total_score[$match_id]) {
+      $inn1_extras = $total_list_opp_a_total[$match_id] - $opp_a_total_score[$match_id];
+      $SQL="INSERT INTO `$database`.`opp_a_xt_list` (`match_id`, `num_lb`, `num_b`) VALUES ($match_id, $inn1_extras, 0)";
+      //echo "$SQL<br />";
+      //$result_sql=mysql_query($SQL);
+    } else {
+      //echo "FAIL: opp_a --> match_id==$match_id($match_date), total==$total_list_opp_a_total[$match_id], bat_total==$opp_a_total_score[$match_id]<br />";
+      $inn1_extras = 0;
+      $SQL="INSERT INTO `$database`.`opp_a_xt_list` (`match_id`, `num_lb`, `num_b`) VALUES ($match_id, $inn1_extras, 0)";
+      //echo "$SQL<br />";
+      //$result_sql=mysql_query($SQL);
+    }
+  }
+  // If innings 2 is ARM then check for total
+  if ($match_list_opp_b_id[$match_id]==1) {
+    if ($total_list_opp_b_total[$match_id] >= $opp_b_total_score[$match_id]) {
+      $inn2_extras = $total_list_opp_b_total[$match_id] - $opp_b_total_score[$match_id];
+      $SQL="INSERT INTO `$database`.`opp_b_xt_list` (`match_id`, `num_lb`, `num_b`) VALUES ($match_id, $inn2_extras, 0)";
+      //echo "$SQL<br />";
+      //$result_sql=mysql_query($SQL);
+    } else {
+      //echo "FAIL: opp_b --> match_id==$match_id($match_date), total==$total_list_opp_b_total[$match_id], bat_total==$opp_b_total_score[$match_id]<br />";
+      $inn2_extras = 0;
+      $SQL="INSERT INTO `$database`.`opp_b_xt_list` (`match_id`, `num_lb`, `num_b`) VALUES ($match_id, $inn2_extras, 0)";
+      //echo "$SQL<br />";
+      //$result_sql=mysql_query($SQL);
+    }
+  }
+}
+// ------------------------------------------------------------------
+// ------------------------------------------------------------------
+// Update innings 1 or innings2 bowling list
+// ------------------------------------------------------------------
 // ------------------------------------------------------------------
 // ------------------------------------------------------------------
 // Close session

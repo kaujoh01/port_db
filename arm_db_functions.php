@@ -55,6 +55,44 @@ function format_date($old_date_format) {
   }
   return $new_date_format;
 }
+// 1. Get out id
+function get_out_id($how_out_text) {
+  // 1 not out
+  // 2 bowled
+  // 3 caught
+  // 4 lbw
+  // 5 dnb
+  // 6 run out
+  // 7 retired
+  // 8 stumped
+  // 9 c&b
+  // 10 hit wicket
+  if(preg_match('/Not Out/',$how_out_text)) {
+    return 1;
+  } else if(preg_match('/Bowled/',$how_out_text)) {
+    return 2;
+  } else if(preg_match('/Ct/',$how_out_text)) {
+    return 3;
+  } else if(preg_match('/LBW/',$how_out_text)) {
+    return 4;
+  } else if(preg_match('/DNB/',$how_out_text)) {
+    return 5;
+  } else if(preg_match('/Run Out/',$how_out_text)) {
+    return 6;
+  } else if(preg_match('/Retd/',$how_out_text)) {
+    return 7;
+  } else if(preg_match('/Stumped/',$how_out_text)) {
+    return 8;
+  } else if(preg_match('/C&B/',$how_out_text)) {
+    return 9;
+  } else if(preg_match('/Hit Wicket/',$how_out_text)) {
+    return 10;
+  } else {
+    return 0;
+    echo "FAIL: Could not find how out ID";
+  }
+  return 0;
+}
 // ------------------------------------------------------------------
 // --CODE ENDS HERE--
 ?>

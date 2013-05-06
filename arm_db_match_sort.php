@@ -19,7 +19,7 @@ $split = array();
 // ------------------------------------------------------------------
 // Functions
 // ------------------------------------------------------------------
-include 'arm_db_format_date.php';
+include 'arm_db_functions.php';
 // ------------------------------------------------------------------
 $file = @fopen('arm_crick_match_list.csv', "r") or exit("Unable to open file!");
 $i=0;
@@ -303,111 +303,25 @@ for ($i=0;$i<$match_num_lines;$i++) {
   $SQL="INSERT INTO `$database`.`match_list` ($match_list_field) VALUES ($match_list_value)";
   //echo "$SQL <br />";
   $result_sql=mysql_query($SQL);
-}
-// ------------------------------------------------------------------
-// ------------------------------------------------------------------
-// Read player list
-// ------------------------------------------------------------------
 
-$file = @fopen('arm_crick_player_list.csv', "r") or exit("Unable to open file!");
-$i=0;
-$split = array();
-while(!feof($file))
-{
-  $curr_line = fgets($file);
-  $split = preg_split('%[,]+%', $curr_line);
-  foreach ($split as $key => $val) {
-    switch ($key)
-      {
-      case 0:  $player_date[$i]  = $val; break;
-      case 1:  $player_name[$i]  = $val; break;
-      case 2:  $runs_scored[$i]  = $val; break;
-      case 3:  $how_out[$i]      = $val; break;
-      case 4:  $overs[$i]        = $val; break;
-      case 5:  $maidens[$i]      = $val; break;
-      case 6:  $runs_concede[$i] = $val; break;
-      case 7:  $wickets[$i]      = $val; break;
-      case 8:  $catches[$i]      = $val; break;
-      case 9:  $stumpings[$i]    = $val; break;
-      case 10: $run_outs[$i]     = $val; break;
-      case 11: $player_home_team[$i]  = $val; break;
-      case 12: $player_match_type[$i] = $val; break;
-      }
-  }
-  $i=$i+1;
-}
-$player_num_lines = $i;
-
-$player_debug_msg = 0;
-
-if ($player_debug_msg!=0) {
-  for ($i=0;$i<$player_num_lines;$i++) {
-    echo "<br />
-          id==$i,
-          date==$player_date[$i],
-          name==$player_name[$i],
-          runs==$runs_scored[$i],
-          how_out==$how_out[$i],
-          overs==$overs[$i],
-          maidens==$maidens[$i],
-          runs_concede==$runs_concede[$i],
-          wickets==$wickets[$i],
-          catches==$catches[$i],
-          stumpings==$stumpings[$i],
-          run_outs==$run_outs[$i],
-          player_home_team==$player_home_team[$i],
-          player_match_type==$player_match_type[$i]";
+  // Update the total scores array
+  if ($bat_first[$i]==0) {
+    $total_list_opp_a_total[$match_id] = $team_score[$i];
+    $total_list_opp_b_total[$match_id] = $opp_score[$i];
+  } else {
+    $total_list_opp_a_total[$match_id] = $opp_score[$i];
+    $total_list_opp_b_total[$match_id] = $team_score[$i];
   }
 }
-fclose($file);
 // ------------------------------------------------------------------
 // ------------------------------------------------------------------
-// Extract player list
+// Update total list DB
 // ------------------------------------------------------------------
-
-// Remove duplicate entries from the ground list array
-$unique_player_list = array_unique($player_name);
-// ------------------------------------------------------------------
-// ------------------------------------------------------------------
-// Empty the table first for player list
-// ------------------------------------------------------------------
-
-$SQL="TRUNCATE player_list";
-$result_sql=mysql_query($SQL);
-
-// ------------------------------------------------------------------
-// Insert the sorted array into the player list
-// ------------------------------------------------------------------
-
-$i=0;
-$split = array();
-foreach ($unique_player_list as $key => $val) {
-  $i=$i+1;
-
-  // extract firt name and last name
-  $split = preg_split('%[\s]+%', $val);
-  foreach ($split as $new_key => $new_val) {
-    switch ($new_key)
-      {
-      case 0: $first_name = $new_val; break;
-      case 1: $last_name = $new_val; break;
-      default: echo "ERROR-->key==$new_key, val==$new_val<br />";
-
-      }
-  }
-  $SQL="INSERT INTO `$database`.`player_list` (`id`, `team_id`, `first_name`, `last_name`) VALUES ($i, 1, '$first_name', '$last_name')";
+foreach ($total_list_opp_a_total as $tot_key => $tot_val) {
+  $put_opp_a_total = $tot_val;
+  $put_opp_b_total = $total_list_opp_b_total[$tot_key];
+  $SQL="INSERT INTO `$database`.`total_list` (`id`, `opp_a_total`, `opp_b_total`) VALUES ($tot_key, $put_opp_a_total, $put_opp_b_total)";
   $result_sql=mysql_query($SQL);
-}
-// ------------------------------------------------------------------
-// ------------------------------------------------------------------
-// Combine match and player DBs
-// ------------------------------------------------------------------
-for ($i=0;$i<$match_num_lines;$i++) {
-  for ($j=0;$j<$player_num_lines;$j++) {
-    if ($date[$i]==$player_date[$j]) {
-      echo "match--> $date[$i], player--> $player_date[$j] <br />";
-    }
-  }
 }
 // ------------------------------------------------------------------
 // ------------------------------------------------------------------
