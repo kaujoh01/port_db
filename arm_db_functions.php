@@ -40,7 +40,7 @@ function format_date($old_date_format) {
       } else if (preg_match("/dec/i", $date_val)) {
 	$new_date_format = "12-$new_date_format";
       } else {
-	echo "ERROR: No date known for $date_val";
+	echo "ERROR: No date known for $date_val<br />";
       }
     } else if ($date_key==2) {
       // this is year
@@ -50,7 +50,7 @@ function format_date($old_date_format) {
 	$new_date_format = "20$date_val-$new_date_format";
       }
     } else {
-      echo "ERROR: No array";
+      echo "ERROR: No array<br />";
     }
   }
   return $new_date_format;
@@ -67,30 +67,31 @@ function get_out_id($how_out_text) {
   // 8 stumped
   // 9 c&b
   // 10 hit wicket
-  if(preg_match('/Not Out/',$how_out_text)) {
+  if(preg_match('/Not Out/i',$how_out_text)) {
     return 1;
-  } else if(preg_match('/Bowled/',$how_out_text)) {
+  } else if(preg_match('/Bowled/i',$how_out_text)) {
     return 2;
-  } else if(preg_match('/Ct/',$how_out_text)) {
+  } else if(preg_match('/Ct/i',$how_out_text)) {
     return 3;
-  } else if(preg_match('/LBW/',$how_out_text)) {
+  } else if(preg_match('/LBW/i',$how_out_text)) {
     return 4;
-  } else if(preg_match('/DNB/',$how_out_text)) {
+  } else if(preg_match('/DNB/i',$how_out_text)) {
     return 5;
-  } else if(preg_match('/Run Out/',$how_out_text)) {
+  } else if(preg_match('/Run Out/i',$how_out_text)) {
     return 6;
-  } else if(preg_match('/Retd/',$how_out_text)) {
+  } else if(preg_match('/Retd/i',$how_out_text)) {
     return 7;
-  } else if(preg_match('/Stumped/',$how_out_text)) {
+  } else if(preg_match('/Stumped/i',$how_out_text)) {
     return 8;
-  } else if(preg_match('/C&B/',$how_out_text)) {
+  } else if(preg_match('/C&B/i',$how_out_text)) {
     return 9;
-  } else if(preg_match('/Hit Wicket/',$how_out_text)) {
+  } else if(preg_match('/Hit Wicket/i',$how_out_text)) {
     return 10;
   } else {
+    echo "ERROR: Could not find how out ID for $how_out_text<br />";
     return 0;
-    echo "FAIL: Could not find how out ID";
   }
+  echo "ERROR: Could not find how out ID for $how_out_text<br />";
   return 0;
 }
 // 3. Get ground id
@@ -162,6 +163,24 @@ function get_team_id($use_team_name) {
       }
     }
   }
+  return 0;
+}
+// 6. Get player id
+function get_player_id($use_player_name) {
+  $SQL = "SELECT * FROM player_list";
+  $sql_result = mysql_query($SQL);
+  while($db_field = mysql_fetch_array($sql_result)) {
+    $local_1_name = $db_field["first_name"];
+    $local_2_name = $db_field["last_name"];
+    $local_player_list_name[$db_field["id"]] = "$local_1_name $local_2_name";
+  }
+
+  foreach ($local_player_list_name as $local_id => $local_player_name) {
+    if(preg_match("/$use_player_name/i",$local_player_name)) {
+      return $local_id;
+    }
+  }
+  echo "ERROR: $use_player_name not found<br />";
   return 0;
 }
 // ------------------------------------------------------------------
