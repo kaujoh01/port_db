@@ -194,6 +194,22 @@ for ($i=0;$i<$match_num_lines;$i++) {
 }
 // ------------------------------------------------------------------
 // ------------------------------------------------------------------
+// Update total list DB
+// ------------------------------------------------------------------
+// Empty the table first for total list
+$SQL="TRUNCATE total_list";
+$result_sql=mysql_query($SQL);
+
+// Update the total table
+for ($i=0;$i<$match_num_lines;$i++) {
+  $put_id = $i+1;
+  $put_inn1_score = $inn1_team_score[$i];
+  $put_inn2_score = $inn2_team_score[$i];
+  $SQL="INSERT INTO `$database`.`total_list` (`id`, `inn1_score`, `inn2_score`) VALUES ($put_id, $put_inn1_score, $put_inn2_score)";
+  $result_sql=mysql_query($SQL);
+}
+// ------------------------------------------------------------------
+// ------------------------------------------------------------------
 // Close session
 // ------------------------------------------------------------------
 //
