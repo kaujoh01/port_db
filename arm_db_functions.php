@@ -55,7 +55,7 @@ function format_date($old_date_format) {
   }
   return $new_date_format;
 }
-// 1. Get out id
+// 2. Get out id
 function get_out_id($how_out_text) {
   // 1 not out
   // 2 bowled
@@ -92,6 +92,57 @@ function get_out_id($how_out_text) {
     echo "FAIL: Could not find how out ID";
   }
   return 0;
+}
+// 3. Get ground id
+function get_ground_id($use_ground_name) {
+  $SQL = "SELECT * FROM ground_list";
+  $sql_result = mysql_query($SQL);
+  while($db_field = mysql_fetch_array($sql_result)) {
+    $local_ground_list_name[$db_field["id"]] = $db_field["name"];
+  }
+  foreach ($local_ground_list_name as $local_id => $local_ground_name) {
+    if(preg_match("/$use_ground_name/i",$local_ground_name)) {
+      return $local_id;
+      echo "ERROR: Why has the code reached here?";
+    }
+  }
+  return 0;
+}
+// 4. Get match type id
+function get_match_type_id($use_match_type_name) {
+  if(preg_match('/fr/i',$use_match_type_name)) {
+    return 0;
+  } else if (preg_match('/l-bz1/i',$use_match_type_name)) {
+    return 1;
+  } else if (preg_match('/l-bz2/i',$use_match_type_name)) {
+    return 2;
+  } else {
+    return 3;
+  }
+  return 3;
+}
+// 5. Get match type id
+function get_result_id($use_bat_first, $use_result_name) {
+  if(preg_match('/won/i',$use_result_name)) {
+    if ($use_bat_first==0) {
+      return 0;
+    } else {
+      return 1;
+    }
+  } else if (preg_match('/lost/i',$use_result_name)) {
+    if ($use_bat_first==0) {
+      return 1;
+    } else {
+      return 0;
+    }
+  } else if (preg_match('/abandoned/i',$use_result_name)) {
+    return 2;
+  } else if (preg_match('/tie/i',$use_result_name)) {
+    return 3;
+  } else {
+    return 4;
+  }
+  return 4;
 }
 // ------------------------------------------------------------------
 // --CODE ENDS HERE--
