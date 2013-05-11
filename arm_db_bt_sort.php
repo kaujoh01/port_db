@@ -236,6 +236,56 @@ for ($i=0;$i<$player_num_lines;$i++) {
 }
 // ------------------------------------------------------------------
 // ------------------------------------------------------------------
+// Update innings 1 or innings 2 bowling
+// ------------------------------------------------------------------
+$SQL="TRUNCATE opp_a_bl_list";
+$result_sql=mysql_query($SQL);
+$SQL="TRUNCATE opp_b_bl_list";
+$result_sql=mysql_query($SQL);
+
+$bl_order = 0;
+for ($i=0;$i<$player_num_lines;$i++) {
+  $put_match_id = $bt_match_id[$i];
+  $put_bl_id = $bt_id[$i];
+  $put_num_overs = $bt_overs[$i];
+  $put_num_maidens = $bt_maidens[$i];
+  $put_num_runs = $bt_runs_concede[$i];
+  $put_num_wickets = $bt_wickets[$i];
+  $put_num_nb = 0;
+  $put_num_wd = 0;
+
+  // Derive the order
+  if ($i==0) {
+    $bl_order = 0;
+  } else if ($bt_date[$i]!=$bt_date[$i-1]) {
+    $bl_order = 0;
+  }
+  if ($put_num_overs!=0) {
+    $bl_order = $bl_order + 1;
+  }
+  $put_order = $bl_order;
+
+  $bl_list_field="`match_id`, `bl_id`, `order`, `num_overs`, `num_maidens`, `num_runs`, `num_wickets`, `num_nb`, `num_wd`";
+  $bl_list_value="$put_match_id, $put_bl_id, $put_order, $put_num_overs, $put_num_maidens, $put_num_runs, $put_num_wickets, $put_num_nb, $put_num_wd";
+  //
+  // Update the DB
+  //
+  if ($put_num_overs!=0) {
+    if ($bt_inn_type[$i]==1) {
+      $SQL="INSERT INTO `$database`.`opp_b_bl_list` ($bl_list_field) VALUES ($bl_list_value)";
+      $result_sql=mysql_query($SQL);
+      //echo "$SQL<br />";
+    } else if ($bt_inn_type[$i]==2) {
+      $SQL="INSERT INTO `$database`.`opp_a_bl_list` ($bl_list_field) VALUES ($bl_list_value)";
+      $result_sql=mysql_query($SQL);
+      //echo "$SQL<br />";
+    } else {
+      echo "ERROR: Couldn't enter data into bowling list <br />";
+    }
+  }
+}
+// ------------------------------------------------------------------
+// ------------------------------------------------------------------
 // Close session
 // ------------------------------------------------------------------
 //
