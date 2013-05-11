@@ -121,7 +121,7 @@ function get_match_type_id($use_match_type_name) {
   }
   return 3;
 }
-// 5. Get match type id
+// 5. Get result id
 function get_result_id($use_bat_first, $use_result_name) {
   if(preg_match('/won/i',$use_result_name)) {
     if ($use_bat_first==0) {
@@ -144,6 +144,27 @@ function get_result_id($use_bat_first, $use_result_name) {
   }
   return 4;
 }
+// 6. Get team id
+function get_team_id($use_team_name) {
+  $SQL = "SELECT * FROM team_list";
+  $sql_result = mysql_query($SQL);
+  while($db_field = mysql_fetch_array($sql_result)) {
+    $local_team_list_name[$db_field["id"]] = $db_field["name"];
+  }
+  // first match ARM name
+  if(preg_match('/ARM /',$use_team_name)) {
+    return 1;
+  } else {
+    foreach ($local_team_list_name as $local_id => $local_team_name) {
+      if(preg_match("/$use_team_name/",$local_team_name)) {
+	return $local_id;
+	echo "ERROR: Why has the code reached here?";
+      }
+    }
+  }
+  return 0;
+}
+// ------------------------------------------------------------------
 // ------------------------------------------------------------------
 // --CODE ENDS HERE--
 ?>
