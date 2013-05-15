@@ -9,6 +9,13 @@
 // Debug enable/disable
 $debug_msg = 0;
 $split = array();
+$total_list_inn1_num_runs = array();
+$total_list_inn2_num_runs = array();
+$opp_bt_match_id = array();
+$opp_bt_fl_id = array();
+$opp_bt_out_id = array();
+$opp_bt_inn_type = array();
+$opp_bt_order = array();
 // ------------------------------------------------------------------
 // ------------------------------------------------------------------
 // Functions
@@ -45,8 +52,8 @@ while($db_field = mysql_fetch_array($db_result))
 {
   $match_id = $db_field["id"];
   $match_list_date[$match_id] = $db_field["date"];
-  $match_list_opp_a_id[$match_id] = $db_field["opp_a_id"];
-  $match_list_opp_b_id[$match_id] = $db_field["opp_b_id"];
+  $match_list_inn1_id[$match_id] = $db_field["inn1_team_id"];
+  $match_list_inn2_id[$match_id] = $db_field["inn2_team_id"];
   $i=$i+1;
 }
 $match_num_lines = $i;
@@ -143,8 +150,8 @@ while(!feof($file))
   // Generate if the current player is innings 1 or innings 2
   if ($bt_match_id[$i]==0) {
     $bt_inn_type[$i] = 3;
-  } else if ( ($match_list_opp_a_id[$bt_match_id[$i]]==1) &&
-	      ($match_list_opp_b_id[$bt_match_id[$i]]==1)) {
+  } else if ( ($match_list_inn1_id[$bt_match_id[$i]]==1) &&
+	      ($match_list_inn2_id[$bt_match_id[$i]]==1)) {
     // This is an ARM vs ARM game
     if ($bt_order[$i]>11) {
       $bt_inn_type[$i] = 2;
@@ -154,9 +161,9 @@ while(!feof($file))
   } else {
     // This is a normal game so find out if ARM was innings1
     // or innings2
-    if ($match_list_opp_a_id[$bt_match_id[$i]]==1) {
+    if ($match_list_inn1_id[$bt_match_id[$i]]==1) {
       $bt_inn_type[$i] = 1;
-    } else if ($match_list_opp_b_id[$bt_match_id[$i]]==1) {
+    } else if ($match_list_inn2_id[$bt_match_id[$i]]==1) {
       $bt_inn_type[$i] = 2;
     } else {
       $bt_inn_type[$i] = 4;
@@ -169,6 +176,53 @@ while(!feof($file))
   if ($bt_inn_type[$i]==4) {
     echo "ERROR: Innings (code - 4) could not be derived for date $bt_date[$i]<br/>";
   }
+  //
+  // Update fielding statistics by plugging into opposition
+  //
+  if ($bt_match_id[$i]!=0) {
+    // Update catches
+    if ($bt_catches[$i]!=0) {
+      for ($j=0; $j<$bt_catches[$i]; $j++) {
+	array_push($opp_bt_match_id, $bt_match_id[$i]);
+	array_push($opp_bt_fl_id, $bt_id[$i]);
+	array_push($opp_bt_out_id, 3);
+	if ($bt_inn_type[$i]==1) {
+	  array_push($opp_bt_inn_type, 2);
+	} else {
+	  array_push($opp_bt_inn_type, 1);
+	}
+      }
+    }
+    // Update stumpings
+    if ($bt_stumpings[$i]!=0) {
+      for ($j=0; $j<$bt_stumpings[$i]; $j++) {
+	array_push($opp_bt_match_id, $bt_match_id[$i]);
+	array_push($opp_bt_fl_id, $bt_id[$i]);
+	array_push($opp_bt_out_id, 8);
+	if ($bt_inn_type[$i]==1) {
+	  array_push($opp_bt_inn_type, 2);
+	} else {
+	  array_push($opp_bt_inn_type, 1);
+	}
+      }
+    }
+    // Update run outs
+    if ($bt_run_outs[$i]!=0) {
+      for ($j=0; $j<$bt_run_outs[$i]; $j++) {
+	array_push($opp_bt_match_id, $bt_match_id[$i]);
+	array_push($opp_bt_fl_id, $bt_id[$i]);
+	array_push($opp_bt_out_id, 6);
+	if ($bt_inn_type[$i]==1) {
+	  array_push($opp_bt_inn_type, 2);
+	} else {
+	  array_push($opp_bt_inn_type, 1);
+	}
+      }
+    }
+  } else {
+    echo "ERROR: Match ID 0 for fielding stat use <br />";
+  }
+
   // Update i to next
   $i=$i+1;
 }
@@ -201,10 +255,10 @@ fclose($file);
 // ------------------------------------------------------------------
 // Update innings 1 or innings 2 batting list
 // ------------------------------------------------------------------
-$SQL="TRUNCATE opp_a_bt_list";
-$result_sql=mysql_query($SQL);
-$SQL="TRUNCATE opp_b_bt_list";
-$result_sql=mysql_query($SQL);
+$SQL="TRUNCATE inn1_bt_list";
+//$result_sql=mysql_query($SQL);
+$SQL="TRUNCATE inn2_bt_list";
+//$result_sql=mysql_query($SQL);
 
 for ($i=0;$i<$player_num_lines;$i++) {
   $put_match_id = $bt_match_id[$i];
@@ -216,32 +270,50 @@ for ($i=0;$i<$player_num_lines;$i++) {
   $put_num_6s = 0;
   $put_out_id = $bt_how_out_id[$i];
   $put_bl_id = 0;
-  $put_c_ro_id = 0;
-  $bt_list_field="`match_id`, `order`, `bt_id`, `num_runs`, `num_balls`, `num_4s`, `num_6s`, `out_id`, `bl_id`, `c_ro_id`";
-  $bt_list_value="$put_match_id, $put_order, $put_bt_id, $put_num_runs, $put_num_balls, $put_num_4s, $put_num_6s, $put_out_id, $put_bl_id, $put_c_ro_id";
+  $put_fl_id = 0;
+  $bt_list_field="`match_id`, `order`, `bt_id`, `num_runs`, `num_balls`, `num_4s`, `num_6s`, `out_id`, `bl_id`, `fl_id`";
+  $bt_list_value="$put_match_id, $put_order, $put_bt_id, $put_num_runs, $put_num_balls, $put_num_4s, $put_num_6s, $put_out_id, $put_bl_id, $put_fl_id";
   //
   // Update the DB
   //
   if ($bt_inn_type[$i]==1) {
-    $SQL="INSERT INTO `$database`.`opp_a_bt_list` ($bt_list_field) VALUES ($bt_list_value)";
-    $result_sql=mysql_query($SQL);
+    $SQL="INSERT INTO `$database`.`inn1_bt_list` ($bt_list_field) VALUES ($bt_list_value)";
+    //$result_sql=mysql_query($SQL);
     //echo "$SQL<br />";
   } else if ($bt_inn_type[$i]==2) {
-    $SQL="INSERT INTO `$database`.`opp_b_bt_list` ($bt_list_field) VALUES ($bt_list_value)";
-    $result_sql=mysql_query($SQL);
+    $SQL="INSERT INTO `$database`.`inn2_bt_list` ($bt_list_field) VALUES ($bt_list_value)";
+    //$result_sql=mysql_query($SQL);
     //echo "$SQL<br />";
   } else {
     echo "ERROR: Couldn't enter data into batting list <br />";
   }
+  //
+  // Update total list
+  //
+//  if ($bt_inn_type[$i]==1) {
+//    if ($put_order==1) {
+//      $total_list_inn1_num_runs[$put_match_id] = $put_num_runs;
+//    } else {
+//      $total_list_inn1_num_runs[$put_match_id] = $total_list_inn1_num_runs[$put_match_id] + $put_num_runs;
+//    }
+//  } else if ($bt_inn_type[$i]==2) {
+//    if ($put_order==1) {
+//      $total_list_inn2_num_runs[$put_match_id] = $put_num_runs;
+//    } else {
+//      $total_list_inn2_num_runs[$put_match_id] = $total_list_inn2_num_runs[$put_match_id] + $put_num_runs;
+//    }
+//  } else {
+//    echo "ERROR: Couldn't calculate num_runs <br />";
+//  }
 }
 // ------------------------------------------------------------------
 // ------------------------------------------------------------------
 // Update innings 1 or innings 2 bowling
 // ------------------------------------------------------------------
-$SQL="TRUNCATE opp_a_bl_list";
-$result_sql=mysql_query($SQL);
-$SQL="TRUNCATE opp_b_bl_list";
-$result_sql=mysql_query($SQL);
+$SQL="TRUNCATE inn1_bl_list";
+//$result_sql=mysql_query($SQL);
+$SQL="TRUNCATE inn2_bl_list";
+//$result_sql=mysql_query($SQL);
 
 $bl_order = 0;
 for ($i=0;$i<$player_num_lines;$i++) {
@@ -272,16 +344,76 @@ for ($i=0;$i<$player_num_lines;$i++) {
   //
   if ($put_num_overs!=0) {
     if ($bt_inn_type[$i]==1) {
-      $SQL="INSERT INTO `$database`.`opp_b_bl_list` ($bl_list_field) VALUES ($bl_list_value)";
-      $result_sql=mysql_query($SQL);
+      $SQL="INSERT INTO `$database`.`inn2_bl_list` ($bl_list_field) VALUES ($bl_list_value)";
+      //$result_sql=mysql_query($SQL);
       //echo "$SQL<br />";
     } else if ($bt_inn_type[$i]==2) {
-      $SQL="INSERT INTO `$database`.`opp_a_bl_list` ($bl_list_field) VALUES ($bl_list_value)";
-      $result_sql=mysql_query($SQL);
+      $SQL="INSERT INTO `$database`.`inn1_bl_list` ($bl_list_field) VALUES ($bl_list_value)";
+      //$result_sql=mysql_query($SQL);
       //echo "$SQL<br />";
     } else {
       echo "ERROR: Couldn't enter data into bowling list <br />";
     }
+  }
+}
+// ------------------------------------------------------------------
+// ------------------------------------------------------------------
+// Update total list
+// ------------------------------------------------------------------
+//$SQL = "SELECT * FROM total_list" ;
+//$db_result = mysql_query($SQL);
+//$i=0;
+//while($db_field = mysql_fetch_array($db_result))
+//{
+//  $match_id = $db_field["id"];
+//  $total_list_inn1_score[$match_id] = $db_field["inn1_score"];
+//  $total_list_inn2_score[$match_id] = $db_field["inn2_score"];
+//}
+//
+//foreach ($total_list_inn1_score as $match_id => $val) {
+//  $put_inn1_score    = $total_list_inn1_score[$match_id];
+//  $put_inn2_score    = $total_list_inn2_score[$match_id];
+//  $put_inn1_num_runs = $total_list_inn1_num_runs[$match_id];
+//  $put_inn2_num_runs = $total_list_inn2_num_runs[$match_id];
+//
+//  $total_list_field="`id`, `inn1_score`, `inn2_score`, `inn1_num_runs`, `inn2_num_runs`";
+//  $total_list_value="$match_id, $put_inn1_score, $put_inn2_score, $put_inn1_num_runs, $put_inn2_num_runs";
+//  $SQL="INSERT INTO `$database`.`total_list` ($total_list_field) VALUES ($total_list_value)";
+//  //$result_sql=mysql_query($SQL);
+//  echo "$SQL<br />";
+//}
+// ------------------------------------------------------------------
+// ------------------------------------------------------------------
+// Update fielding list
+// ------------------------------------------------------------------
+// update order
+$fl_order = 1;
+for ($i=0; $i<sizeof($opp_bt_match_id); $i++) {
+  if ($i==0) {
+    $fl_order = 1;
+  } else if ($opp_bt_match_id[$i]!=$opp_bt_match_id[$i-1]) {
+    $fl_order = 1;
+  } else {
+    $fl_order = $fl_order + 1;
+  }
+  $opp_bt_order[$i] = $fl_order;
+}
+foreach ($opp_bt_match_id as $key => $val) {
+  $bt_list_field="`match_id`, `order`, `bt_id`, `num_runs`, `num_balls`, `num_4s`, `num_6s`, `out_id`, `bl_id`, `fl_id`";
+  $bt_list_value="$val, $opp_bt_order[$key], 0, 0, 0, 0, 0, $opp_bt_out_id[$key], 0, $opp_bt_fl_id[$key]";
+  if ($opp_bt_inn_type[$key]==1) {
+    $SQL="INSERT INTO `$database`.`inn1_bt_list` ($bt_list_field) VALUES ($bt_list_value)";
+  } else {
+    $SQL="INSERT INTO `$database`.`inn2_bt_list` ($bt_list_field) VALUES ($bt_list_value)";
+  }
+  $result_sql=mysql_query($SQL);
+  //echo "$SQL<br />";
+
+  if ($debug_msg!=0) {
+    echo "match_id==$val,
+          fl_id==$opp_bt_fl_id[$key],
+          out_id==$opp_bt_out_id[$key],
+          inn_type==$opp_bt_inn_type[$key]<br />";
   }
 }
 // ------------------------------------------------------------------
