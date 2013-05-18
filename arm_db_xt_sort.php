@@ -55,9 +55,9 @@ $num_matches = $i;
 // ------------------------------------------------------------------
 // Update extras list
 // ------------------------------------------------------------------
-$SQL="TRUNCATE opp_a_xt_list";
+$SQL="TRUNCATE inn1_xt_list";
 $result_sql=mysql_query($SQL);
-$SQL="TRUNCATE opp_b_xt_list";
+$SQL="TRUNCATE inn2_xt_list";
 $result_sql=mysql_query($SQL);
 
 foreach ($total_list_inn1_score as $match_id => $val) {
@@ -66,22 +66,22 @@ foreach ($total_list_inn1_score as $match_id => $val) {
   //
   if ($total_list_inn1_score[$match_id]>=$total_list_inn1_num_runs[$match_id]) {
     $diff = $total_list_inn1_score[$match_id] - $total_list_inn1_num_runs[$match_id];
-    $SQL="INSERT INTO `$database`.`opp_a_xt_list` (`match_id`, `num_lb`, `num_b`) VALUES ($match_id, 0, $diff)";
+    $SQL="INSERT INTO `$database`.`inn1_xt_list` (`match_id`, `num_lb`, `num_b`) VALUES ($match_id, 0, $diff)";
     $result_sql=mysql_query($SQL);
     //echo "$SQL<br />";
   } else {
-    echo "ERROR: Total score less than num score for innings 1 in match_id==$match_id";
+    echo "ERROR: Total score less than num score for innings 1 in match_id==$match_id<br />";
   }
   //
   // Update innings 2
   //
   if ($total_list_inn2_score[$match_id]>=$total_list_inn2_num_runs[$match_id]) {
     $diff = $total_list_inn2_score[$match_id] - $total_list_inn2_num_runs[$match_id];
-    $SQL="INSERT INTO `$database`.`opp_b_xt_list` (`match_id`, `num_lb`, `num_b`) VALUES ($match_id, 0, $diff)";
+    $SQL="INSERT INTO `$database`.`inn2_xt_list` (`match_id`, `num_lb`, `num_b`) VALUES ($match_id, 0, $diff)";
     $result_sql=mysql_query($SQL);
     //echo "$SQL<br />";
   } else {
-    echo "ERROR: Total score less than num score for innings 2 in match_id==$match_id";
+    echo "ERROR: Total score less than num score for innings 2 in match_id==$match_id<br />";
   }
 }
 // ------------------------------------------------------------------

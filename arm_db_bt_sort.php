@@ -290,21 +290,25 @@ for ($i=0;$i<$player_num_lines;$i++) {
   //
   // Update total list
   //
-//  if ($bt_inn_type[$i]==1) {
-//    if ($put_order==1) {
-//      $total_list_inn1_num_runs[$put_match_id] = $put_num_runs;
-//    } else {
-//      $total_list_inn1_num_runs[$put_match_id] = $total_list_inn1_num_runs[$put_match_id] + $put_num_runs;
-//    }
-//  } else if ($bt_inn_type[$i]==2) {
-//    if ($put_order==1) {
-//      $total_list_inn2_num_runs[$put_match_id] = $put_num_runs;
-//    } else {
-//      $total_list_inn2_num_runs[$put_match_id] = $total_list_inn2_num_runs[$put_match_id] + $put_num_runs;
-//    }
-//  } else {
-//    echo "ERROR: Couldn't calculate num_runs <br />";
-//  }
+  if ($bt_inn_type[$i]==1) {
+    if ($put_order==1) {
+      $total_list_inn1_num_runs[$put_match_id] = $put_num_runs;
+      $total_list_inn2_num_runs[$put_match_id] = 0;
+    } else {
+      $total_list_inn1_num_runs[$put_match_id] = $total_list_inn1_num_runs[$put_match_id] + $put_num_runs;
+      $total_list_inn2_num_runs[$put_match_id] = 0;
+    }
+  } else if ($bt_inn_type[$i]==2) {
+    if ($put_order==1) {
+      $total_list_inn2_num_runs[$put_match_id] = $put_num_runs;
+      $total_list_inn1_num_runs[$put_match_id] = 0;
+    } else {
+      $total_list_inn2_num_runs[$put_match_id] = $total_list_inn2_num_runs[$put_match_id] + $put_num_runs;
+      $total_list_inn1_num_runs[$put_match_id] = 0;
+    }
+  } else {
+    echo "ERROR: Couldn't calculate num_runs <br />";
+  }
 }
 // ------------------------------------------------------------------
 // ------------------------------------------------------------------
@@ -360,28 +364,36 @@ for ($i=0;$i<$player_num_lines;$i++) {
 // ------------------------------------------------------------------
 // Update total list
 // ------------------------------------------------------------------
-//$SQL = "SELECT * FROM total_list" ;
-//$db_result = mysql_query($SQL);
-//$i=0;
-//while($db_field = mysql_fetch_array($db_result))
-//{
-//  $match_id = $db_field["id"];
-//  $total_list_inn1_score[$match_id] = $db_field["inn1_score"];
-//  $total_list_inn2_score[$match_id] = $db_field["inn2_score"];
-//}
-//
-//foreach ($total_list_inn1_score as $match_id => $val) {
-//  $put_inn1_score    = $total_list_inn1_score[$match_id];
-//  $put_inn2_score    = $total_list_inn2_score[$match_id];
-//  $put_inn1_num_runs = $total_list_inn1_num_runs[$match_id];
-//  $put_inn2_num_runs = $total_list_inn2_num_runs[$match_id];
-//
-//  $total_list_field="`id`, `inn1_score`, `inn2_score`, `inn1_num_runs`, `inn2_num_runs`";
-//  $total_list_value="$match_id, $put_inn1_score, $put_inn2_score, $put_inn1_num_runs, $put_inn2_num_runs";
-//  $SQL="INSERT INTO `$database`.`total_list` ($total_list_field) VALUES ($total_list_value)";
-//  //$result_sql=mysql_query($SQL);
-//  echo "$SQL<br />";
-//}
+// Read table
+$SQL = "SELECT * FROM total_list" ;
+$db_result = mysql_query($SQL);
+$i=0;
+while($db_field = mysql_fetch_array($db_result))
+{
+  $match_id = $db_field["id"];
+  $total_list_inn1_score[$match_id] = $db_field["inn1_score"];
+  $total_list_inn2_score[$match_id] = $db_field["inn2_score"];
+}
+
+// Truncate table
+$SQL="TRUNCATE total_list";
+$result_sql=mysql_query($SQL);
+
+// Write to table
+foreach ($total_list_inn1_score as $match_id => $val) {
+  // if the match id doesn't exist then skip
+  if (array_key_exists($match_id, $total_list_inn1_num_runs)) {
+    $put_inn1_score    = $total_list_inn1_score[$match_id];
+    $put_inn2_score    = $total_list_inn2_score[$match_id];
+    $put_inn1_num_runs = $total_list_inn1_num_runs[$match_id];
+    $put_inn2_num_runs = $total_list_inn2_num_runs[$match_id];
+    $total_list_field="`id`, `inn1_score`, `inn2_score`, `inn1_num_runs`, `inn2_num_runs`";
+    $total_list_value="$match_id, $put_inn1_score, $put_inn2_score, $put_inn1_num_runs, $put_inn2_num_runs";
+    $SQL="INSERT INTO `$database`.`total_list` ($total_list_field) VALUES ($total_list_value)";
+    $result_sql=mysql_query($SQL);
+    //echo "$SQL<br />";
+  }
+}
 // ------------------------------------------------------------------
 // ------------------------------------------------------------------
 // Update fielding list
@@ -406,7 +418,7 @@ foreach ($opp_bt_match_id as $key => $val) {
   } else {
     $SQL="INSERT INTO `$database`.`inn2_bt_list` ($bt_list_field) VALUES ($bt_list_value)";
   }
-  $result_sql=mysql_query($SQL);
+  //$result_sql=mysql_query($SQL);
   //echo "$SQL<br />";
 
   if ($debug_msg!=0) {
