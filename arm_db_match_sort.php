@@ -150,11 +150,11 @@ for ($i=0;$i<$match_num_lines;$i++) {
   // -- GROUND ID --
   $put_ground_id = $ground_id[$i];
   // -- OPP A ID --> INN1 ID --
-  $put_opp_a_id = $inn1_team_id[$i];
+  $put_inn1_team_id = $inn1_team_id[$i];
   // -- OPP B ID --> INN2 ID --
-  $put_opp_b_id = $inn2_team_id[$i];
+  $put_inn2_team_id = $inn2_team_id[$i];
   // -- WHO WON --> RESULTS ID --
-  $put_who_won = $result_id[$i];
+  $put_result_id = $result_id[$i];
   // -- HOME OR AWAY --
   $put_home_away = 0;
   // -- NUM OVERS --
@@ -175,9 +175,9 @@ for ($i=0;$i<$match_num_lines;$i++) {
           date==$put_date,
           type_id==$put_type_id,
           ground_id==$put_ground_id,
-          opp_a_id==$put_opp_a_id,
-          opp_b_id==$put_opp_b_id,
-          who_won==$put_who_won,
+          inn1_team_id==$put_inn1_team_id,
+          inn2_team_id==$put_inn2_team_id,
+          result_id==$put_result_id,
           home_away==$put_home_away,
           num_overs==$put_num_overs,
           overs_type==$put_overs_type,
@@ -187,8 +187,8 @@ for ($i=0;$i<$match_num_lines;$i++) {
 
   // Insert the master match list
   $match_id=$i+1;
-  $match_list_field="`id`, `date`, `type_id`, `ground_id`, `opp_a_id`, `opp_b_id`, `who_won`, `home_away`, `num_overs`, `overs_type`, `description`, `is_legacy`";
-  $match_list_value="$match_id, '$put_date', $put_type_id, $put_ground_id, $put_opp_a_id, $put_opp_b_id, $put_who_won, $put_home_away, $put_num_overs, $put_overs_type, '$put_description', $put_is_legacy";
+  $match_list_field="`id`, `date`, `type_id`, `ground_id`, `inn1_team_id`, `inn2_team_id`, `result_id`, `home_away`, `num_overs`, `overs_type`, `description`, `is_legacy`";
+  $match_list_value="$match_id, '$put_date', $put_type_id, $put_ground_id, $put_inn1_team_id, $put_inn2_team_id, $put_result_id, $put_home_away, $put_num_overs, $put_overs_type, '$put_description', $put_is_legacy";
   $SQL="INSERT INTO `$database`.`match_list` ($match_list_field) VALUES ($match_list_value)";
   $result_sql=mysql_query($SQL);
 }
@@ -205,7 +205,9 @@ for ($i=0;$i<$match_num_lines;$i++) {
   $put_id = $i+1;
   $put_inn1_score = $inn1_team_score[$i];
   $put_inn2_score = $inn2_team_score[$i];
-  $SQL="INSERT INTO `$database`.`total_list` (`id`, `inn1_score`, `inn2_score`) VALUES ($put_id, $put_inn1_score, $put_inn2_score)";
+  $total_list_field="`id`, `inn1_score`, `inn2_score`, `inn1_num_runs`, `inn2_num_runs`";
+  $total_list_value="$put_id, $put_inn1_score, $put_inn2_score, 0, 0";
+  $SQL="INSERT INTO `$database`.`total_list` ($total_list_field) VALUES ($total_list_value)";
   $result_sql=mysql_query($SQL);
 }
 // ------------------------------------------------------------------

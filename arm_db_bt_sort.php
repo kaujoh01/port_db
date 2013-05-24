@@ -256,13 +256,17 @@ fclose($file);
 // Update innings 1 or innings 2 batting list
 // ------------------------------------------------------------------
 $SQL="TRUNCATE inn1_bt_list";
-//$result_sql=mysql_query($SQL);
+$result_sql=mysql_query($SQL);
 $SQL="TRUNCATE inn2_bt_list";
-//$result_sql=mysql_query($SQL);
+$result_sql=mysql_query($SQL);
 
 for ($i=0;$i<$player_num_lines;$i++) {
   $put_match_id = $bt_match_id[$i];
-  $put_order = $bt_order[$i];
+  if ($bt_order[$i]>11) {
+    $put_order = $bt_order[$i] - 11;
+  } else {
+    $put_order = $bt_order[$i];
+  }
   $put_bt_id = $bt_id[$i];
   $put_num_runs = $bt_runs_scored[$i];
   $put_num_balls = 0;
@@ -278,11 +282,11 @@ for ($i=0;$i<$player_num_lines;$i++) {
   //
   if ($bt_inn_type[$i]==1) {
     $SQL="INSERT INTO `$database`.`inn1_bt_list` ($bt_list_field) VALUES ($bt_list_value)";
-    //$result_sql=mysql_query($SQL);
+    $result_sql=mysql_query($SQL);
     //echo "$SQL<br />";
   } else if ($bt_inn_type[$i]==2) {
     $SQL="INSERT INTO `$database`.`inn2_bt_list` ($bt_list_field) VALUES ($bt_list_value)";
-    //$result_sql=mysql_query($SQL);
+    $result_sql=mysql_query($SQL);
     //echo "$SQL<br />";
   } else {
     echo "ERROR: Couldn't enter data into batting list <br />";
@@ -377,7 +381,7 @@ while($db_field = mysql_fetch_array($db_result))
 
 // Truncate table
 $SQL="TRUNCATE total_list";
-$result_sql=mysql_query($SQL);
+//$result_sql=mysql_query($SQL);
 
 // Write to table
 foreach ($total_list_inn1_score as $match_id => $val) {
@@ -390,7 +394,7 @@ foreach ($total_list_inn1_score as $match_id => $val) {
     $total_list_field="`id`, `inn1_score`, `inn2_score`, `inn1_num_runs`, `inn2_num_runs`";
     $total_list_value="$match_id, $put_inn1_score, $put_inn2_score, $put_inn1_num_runs, $put_inn2_num_runs";
     $SQL="INSERT INTO `$database`.`total_list` ($total_list_field) VALUES ($total_list_value)";
-    $result_sql=mysql_query($SQL);
+    //$result_sql=mysql_query($SQL);
     //echo "$SQL<br />";
   }
 }
