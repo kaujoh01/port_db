@@ -150,15 +150,19 @@ while(!feof($file))
   // Generate if the current player is innings 1 or innings 2
   if ($bt_match_id[$i]==0) {
     $bt_inn_type[$i] = 3;
+    $bt_bat_order[$i] = 0;
   } else if ( ($match_list_inn1_id[$bt_match_id[$i]]==1) &&
 	      ($match_list_inn2_id[$bt_match_id[$i]]==1)) {
     // This is an ARM vs ARM game
     if ($bt_order[$i]>11) {
       $bt_inn_type[$i] = 2;
+      $bt_bat_order[$i] = $bt_order[$i] - 11;
     } else {
       $bt_inn_type[$i] = 1;
+      $bt_bat_order[$i] = $bt_order[$i];
     }
   } else {
+    $bt_bat_order[$i] = $bt_order[$i];
     // This is a normal game so find out if ARM was innings1
     // or innings2
     if ($match_list_inn1_id[$bt_match_id[$i]]==1) {
@@ -256,17 +260,13 @@ fclose($file);
 // Update innings 1 or innings 2 batting list
 // ------------------------------------------------------------------
 $SQL="TRUNCATE inn1_bt_list";
-$result_sql=mysql_query($SQL);
+//$result_sql=mysql_query($SQL);
 $SQL="TRUNCATE inn2_bt_list";
-$result_sql=mysql_query($SQL);
+//$result_sql=mysql_query($SQL);
 
 for ($i=0;$i<$player_num_lines;$i++) {
   $put_match_id = $bt_match_id[$i];
-  if ($bt_order[$i]>11) {
-    $put_order = $bt_order[$i] - 11;
-  } else {
-    $put_order = $bt_order[$i];
-  }
+  $put_order = $bt_bat_order[$i];
   $put_bt_id = $bt_id[$i];
   $put_num_runs = $bt_runs_scored[$i];
   $put_num_balls = 0;
@@ -277,16 +277,21 @@ for ($i=0;$i<$player_num_lines;$i++) {
   $put_fl_id = 0;
   $bt_list_field="`match_id`, `order`, `bt_id`, `num_runs`, `num_balls`, `num_4s`, `num_6s`, `out_id`, `bl_id`, `fl_id`";
   $bt_list_value="$put_match_id, $put_order, $put_bt_id, $put_num_runs, $put_num_balls, $put_num_4s, $put_num_6s, $put_out_id, $put_bl_id, $put_fl_id";
+
+  // SANITY CHECK
+  if ($put_order>11) {
+    echo "WARNING: Batting order greater than 11 for match_id==$put_match_id <br />";
+  }
   //
   // Update the DB
   //
   if ($bt_inn_type[$i]==1) {
     $SQL="INSERT INTO `$database`.`inn1_bt_list` ($bt_list_field) VALUES ($bt_list_value)";
-    $result_sql=mysql_query($SQL);
+    //$result_sql=mysql_query($SQL);
     //echo "$SQL<br />";
   } else if ($bt_inn_type[$i]==2) {
     $SQL="INSERT INTO `$database`.`inn2_bt_list` ($bt_list_field) VALUES ($bt_list_value)";
-    $result_sql=mysql_query($SQL);
+    //$result_sql=mysql_query($SQL);
     //echo "$SQL<br />";
   } else {
     echo "ERROR: Couldn't enter data into batting list <br />";
@@ -319,9 +324,9 @@ for ($i=0;$i<$player_num_lines;$i++) {
 // Update innings 1 or innings 2 bowling
 // ------------------------------------------------------------------
 $SQL="TRUNCATE inn1_bl_list";
-//$result_sql=mysql_query($SQL);
+$result_sql=mysql_query($SQL);
 $SQL="TRUNCATE inn2_bl_list";
-//$result_sql=mysql_query($SQL);
+$result_sql=mysql_query($SQL);
 
 $bl_order = 0;
 for ($i=0;$i<$player_num_lines;$i++) {
@@ -337,13 +342,19 @@ for ($i=0;$i<$player_num_lines;$i++) {
   // Derive the order
   if ($i==0) {
     $bl_order = 0;
-  } else if ($bt_date[$i]!=$bt_date[$i-1]) {
+  } else if ( ($bt_date[$i]!=$bt_date[$i-1]) ||
+              ($bt_inn_type[$i]!=$bt_inn_type[$i-1])) {
     $bl_order = 0;
   }
   if ($put_num_overs!=0) {
     $bl_order = $bl_order + 1;
   }
   $put_order = $bl_order;
+
+  // SANITY CHECK
+  if ($put_order>11) {
+    echo "WARNING: Bowling order greater than 11 for match_id==$put_match_id <br />";
+  }
 
   $bl_list_field="`match_id`, `bl_id`, `order`, `num_overs`, `num_maidens`, `num_runs`, `num_wickets`, `num_nb`, `num_wd`";
   $bl_list_value="$put_match_id, $put_bl_id, $put_order, $put_num_overs, $put_num_maidens, $put_num_runs, $put_num_wickets, $put_num_nb, $put_num_wd";
@@ -353,11 +364,11 @@ for ($i=0;$i<$player_num_lines;$i++) {
   if ($put_num_overs!=0) {
     if ($bt_inn_type[$i]==1) {
       $SQL="INSERT INTO `$database`.`inn2_bl_list` ($bl_list_field) VALUES ($bl_list_value)";
-      //$result_sql=mysql_query($SQL);
+      $result_sql=mysql_query($SQL);
       //echo "$SQL<br />";
     } else if ($bt_inn_type[$i]==2) {
       $SQL="INSERT INTO `$database`.`inn1_bl_list` ($bl_list_field) VALUES ($bl_list_value)";
-      //$result_sql=mysql_query($SQL);
+      $result_sql=mysql_query($SQL);
       //echo "$SQL<br />";
     } else {
       echo "ERROR: Couldn't enter data into bowling list <br />";
