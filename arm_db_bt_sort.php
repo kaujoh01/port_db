@@ -15,7 +15,6 @@ $opp_bt_match_id = array();
 $opp_bt_fl_id = array();
 $opp_bt_out_id = array();
 $opp_bt_inn_type = array();
-$opp_bt_order = array();
 // ------------------------------------------------------------------
 // ------------------------------------------------------------------
 // Functions
@@ -180,6 +179,13 @@ while(!feof($file))
   if ($bt_inn_type[$i]==4) {
     echo "ERROR: Innings (code - 4) could not be derived for date $bt_date[$i]<br/>";
   }
+  // Keep a record of ARM vs ARM game
+  if ( ($match_list_inn1_id[$bt_match_id[$i]]==1) &&
+       ($match_list_inn2_id[$bt_match_id[$i]]==1)) {
+    $bt_arm_vs_arm[$i] = 1;
+  } else {
+    $bt_arm_vs_arm[$i] = 0;
+  }
   //
   // Update fielding statistics by plugging into opposition
   //
@@ -324,9 +330,9 @@ for ($i=0;$i<$player_num_lines;$i++) {
 // Update innings 1 or innings 2 bowling
 // ------------------------------------------------------------------
 $SQL="TRUNCATE inn1_bl_list";
-$result_sql=mysql_query($SQL);
+//$result_sql=mysql_query($SQL);
 $SQL="TRUNCATE inn2_bl_list";
-$result_sql=mysql_query($SQL);
+//$result_sql=mysql_query($SQL);
 
 $bl_order = 0;
 for ($i=0;$i<$player_num_lines;$i++) {
@@ -364,11 +370,11 @@ for ($i=0;$i<$player_num_lines;$i++) {
   if ($put_num_overs!=0) {
     if ($bt_inn_type[$i]==1) {
       $SQL="INSERT INTO `$database`.`inn2_bl_list` ($bl_list_field) VALUES ($bl_list_value)";
-      $result_sql=mysql_query($SQL);
+      //$result_sql=mysql_query($SQL);
       //echo "$SQL<br />";
     } else if ($bt_inn_type[$i]==2) {
       $SQL="INSERT INTO `$database`.`inn1_bl_list` ($bl_list_field) VALUES ($bl_list_value)";
-      $result_sql=mysql_query($SQL);
+      //$result_sql=mysql_query($SQL);
       //echo "$SQL<br />";
     } else {
       echo "ERROR: Couldn't enter data into bowling list <br />";
@@ -413,35 +419,14 @@ foreach ($total_list_inn1_score as $match_id => $val) {
 // ------------------------------------------------------------------
 // Update fielding list
 // ------------------------------------------------------------------
-// update order
-$fl_order = 1;
-for ($i=0; $i<sizeof($opp_bt_match_id); $i++) {
-  if ($i==0) {
-    $fl_order = 1;
-  } else if ($opp_bt_match_id[$i]!=$opp_bt_match_id[$i-1]) {
-    $fl_order = 1;
-  } else {
-    $fl_order = $fl_order + 1;
-  }
-  $opp_bt_order[$i] = $fl_order;
-}
+$i=0;
 foreach ($opp_bt_match_id as $key => $val) {
-  $bt_list_field="`match_id`, `order`, `bt_id`, `num_runs`, `num_balls`, `num_4s`, `num_6s`, `out_id`, `bl_id`, `fl_id`";
-  $bt_list_value="$val, $opp_bt_order[$key], 0, 0, 0, 0, 0, $opp_bt_out_id[$key], 0, $opp_bt_fl_id[$key]";
-  if ($opp_bt_inn_type[$key]==1) {
-    $SQL="INSERT INTO `$database`.`inn1_bt_list` ($bt_list_field) VALUES ($bt_list_value)";
-  } else {
-    $SQL="INSERT INTO `$database`.`inn2_bt_list` ($bt_list_field) VALUES ($bt_list_value)";
-  }
+  $fl_list_field="`index`, `match_id`, `inn_type`, `out_id`, `fl_id`";
+  $fl_list_value="$i, $val, $opp_bt_inn_type[$key], $opp_bt_out_id[$key], $opp_bt_fl_id[$key]";
+  $SQL="INSERT INTO `$database`.`fl_list` ($fl_list_field) VALUES ($fl_list_value)";
   //$result_sql=mysql_query($SQL);
   //echo "$SQL<br />";
-
-  if ($debug_msg!=0) {
-    echo "match_id==$val,
-          fl_id==$opp_bt_fl_id[$key],
-          out_id==$opp_bt_out_id[$key],
-          inn_type==$opp_bt_inn_type[$key]<br />";
-  }
+  $i = $i + 1;
 }
 // ------------------------------------------------------------------
 // ------------------------------------------------------------------
